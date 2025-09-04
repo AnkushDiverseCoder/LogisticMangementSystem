@@ -1,11 +1,17 @@
 "use client";
 
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { ColumnDef, SortingState } from "@tanstack/react-table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import tripService from "@/lib/tripService";
@@ -39,64 +45,47 @@ export default function TripsTable() {
     const [sorting, setSorting] = useState<SortingState>([]);
     const [usernameMap, setUsernameMap] = useState<Record<string, string>>({});
 
+    // Edit modal
     const [editOpen, setEditOpen] = useState(false);
     const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
     const [editForm, setEditForm] = useState<Partial<Trip>>({});
 
     // ========================
-    // Fetch Trips + Users
+    // Fetch Trips + Usernames
     // ========================
-    const fetchTrips = useCallback(async () => {
+    const fetchTrips = async () => {
         setLoading(true);
         try {
-            let startISO = "";
-            let endISO = "";
+            let startISO: string | undefined;
+            let endISO: string | undefined;
 
             if (filterDate) {
-                const start = new Date(`${filterDate}T00:00:00`);
-                const end = new Date(`${filterDate}T23:59:59.999`);
+                const start = new Date(filterDate + "T00:00:00");
+                const end = new Date(filterDate + "T23:59:59.999");
                 startISO = start.toISOString();
                 endISO = end.toISOString();
             }
 
-            const res = await tripService.listTrips();
+            const res = await tripService.searchTrips({
+                search,
+                pageNumber: page,
+                pageSize,
+                startDate: startISO,
+                endDate: endISO,
+            });
 
             if (!res.error) {
-                let tripsRaw = res.data || [];
-                // Map DefaultDocument[] to Trip[]
-                let trips: Trip[] = tripsRaw.map((doc: any) => ({
-                    $id: doc.$id,
-                    userEmail: doc.userEmail,
-                    siteName: doc.siteName,
-                    vehicleNumber: doc.vehicleNumber,
-                    tripId: doc.tripId,
-                    tripMethod: doc.tripMethod,
-                    startKm: doc.startKm,
-                    endKm: doc.endKm,
-                    distanceTravelled: doc.distanceTravelled,
-                    escort: doc.escort,
-                    attached: doc.attached,
-                    edited: doc.edited,
-                    shiftTime: doc.shiftTime,
-                    $createdAt: doc.$createdAt,
-                    $updatedAt: doc.$updatedAt,
-                }));
+                let trips = res.data || [];
 
                 // Frontend sorting
                 if (sorting.length > 0) {
-                    trips = [...trips].sort((a, b) => {
+                    trips = [...trips].sort((a: Trip, b: Trip) => {
                         for (const sort of sorting) {
-                            const key = sort.id as keyof Trip;
-                            const aVal = a[key];
-                            const bVal = b[key];
-
-                            // Handle null/undefined values
-                            if (aVal == null && bVal == null) continue;
-                            if (aVal == null) return sort.desc ? 1 : -1;
-                            if (bVal == null) return sort.desc ? -1 : 1;
-
-                            if (aVal > bVal) return sort.desc ? -1 : 1;
-                            if (aVal < bVal) return sort.desc ? 1 : -1;
+                            const { id, desc } = sort;
+                            const aVal = (a as any)[id];
+                            const bVal = (b as any)[id];
+                            if (aVal > bVal) return desc ? -1 : 1;
+                            if (aVal < bVal) return desc ? 1 : -1;
                         }
                         return 0;
                     });
@@ -105,10 +94,10 @@ export default function TripsTable() {
                 setData(trips);
 
                 // Fetch usernames mapping
-                const emails = trips.map((t) => t.userEmail);
+                const emails: string[] = trips.map((t: Trip) => t.userEmail);
                 const users = await authService.getUsersByEmails(emails);
                 const map: Record<string, string> = {};
-                emails.forEach((e) => {
+                emails.forEach((e: string) => {
                     map[e] = users[e]?.username ?? "";
                 });
                 setUsernameMap(map);
@@ -122,72 +111,62 @@ export default function TripsTable() {
         } finally {
             setLoading(false);
         }
-    }, [search, filterDate, page, pageSize, sorting]);
+    };
 
     useEffect(() => {
         fetchTrips();
-    }, [fetchTrips]);
+    }, [search, filterDate, page, sorting]);
 
     // ========================
     // Delete
     // ========================
-    const handleDelete = useCallback(
-        async (tripId: string) => {
-            if (!confirm("Are you sure you want to delete this trip?")) return;
-            const res = await tripService.deleteTrip(tripId);
-            if (!res.error) fetchTrips();
-            else alert(res.error);
-        },
-        [fetchTrips]
-    );
+    const handleDelete = async (tripId: string) => {
+        if (!confirm("Are you sure you want to delete this trip?")) return;
+        const res = await tripService.deleteTrip(tripId);
+        if (!res.error) fetchTrips();
+        else alert(res.error);
+    };
 
     // ========================
     // CSV Export
     // ========================
-    const exportCSV = useCallback(
-        <T extends object>(rows: T[], map?: Record<string, string>) => {
-            if (!rows.length) return;
+    const exportCSV = <T extends object>(data: T[], usernameMap?: Record<string, string>) => {
+        if (!data.length) return;
 
-            const keys = Object.keys(rows[0]);
-            const csvContent = [
-                keys.map((k) => (k === "userEmail" ? "User (Email)" : k)).join(","),
-                ...rows.map((row) =>
-                    keys
-                        .map((k) => {
-                            if (k === "userEmail") {
-                                const email = (row as any)[k] ?? "";
-                                const username = map?.[email] ?? "";
-                                return `"${username} (${email})"`;
-                            }
-                            return `"${(row as any)[k] ?? ""}"`;
-                        })
-                        .join(",")
-                ),
-            ].join("\n");
+        const keys = Object.keys(data[0]);
+        const csvContent = [
+            keys.map(k => k === "userEmail" ? "User (Email)" : k).join(","),
+            ...data.map((row: T) =>
+                keys.map(k => {
+                    if (k === "userEmail") {
+                        const email = (row as any)[k] ?? "";
+                        const username = usernameMap?.[email] ?? "";
+                        return `"${username} (${email})"`;
+                    }
+                    return `"${(row as any)[k] ?? ""}"`;
+                }).join(",")
+            )
+        ].join("\n");
 
-            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.setAttribute("download", "trips.csv");
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        },
-        []
-    );
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute("download", "trips.csv");
+        link.click();
+    };
 
     // ========================
     // Edit modal
     // ========================
-    const openEdit = useCallback((trip: Trip) => {
+    const openEdit = (trip: Trip) => {
         setEditingTrip(trip);
         setEditForm(trip);
         setEditOpen(true);
-    }, []);
+    };
 
-    const handleEditSave = useCallback(async () => {
+    const handleEditSave = async () => {
         if (!editingTrip) return;
-        const payload: Partial<Trip> = { ...editForm };
+        const payload = { ...editForm };
         if (!editForm.shiftTime) payload.shiftTime = editingTrip.shiftTime;
 
         const res = await tripService.updateTrip(editingTrip.$id, payload);
@@ -197,81 +176,74 @@ export default function TripsTable() {
         } else {
             alert(res.error);
         }
-    }, [editingTrip, editForm, fetchTrips]);
+    };
 
     // ========================
     // Columns
     // ========================
-    const columns: ColumnDef<Trip>[] = useMemo(
-        () => [
-            { accessorKey: "tripId", header: "Trip ID", enableSorting: true },
-            {
-                accessorKey: "userEmail",
-                header: "User Email",
-                enableSorting: true,
-                cell: ({ getValue }) => {
-                    const email = getValue() as string;
-                    const username = usernameMap[email] ?? "";
-                    return `${username} (${email})`;
-                },
-            },
-            { accessorKey: "siteName", header: "Site", enableSorting: true },
-            { accessorKey: "vehicleNumber", header: "Vehicle", enableSorting: true },
-            { accessorKey: "tripMethod", header: "Method", enableSorting: true },
-            { accessorKey: "startKm", header: "Start Km", enableSorting: true },
-            { accessorKey: "endKm", header: "End Km", enableSorting: true },
-            { accessorKey: "distanceTravelled", header: "Distance", enableSorting: true },
-            {
-                accessorKey: "escort",
-                header: "Escort",
-                enableSorting: true,
-                cell: ({ row }) => (row.original.escort ?? false ? "Yes" : "No"),
-            },
-            {
-                accessorKey: "attached",
-                header: "Attached",
-                enableSorting: true,
-                cell: ({ row }) => (row.original.attached ?? false ? "Yes" : "No"),
-            },
-            {
-                accessorKey: "edited",
-                header: "Edited",
-                enableSorting: true,
-                cell: ({ row }) => (row.original.edited ?? false ? "Yes" : "No"),
-            },
-            {
-                accessorKey: "shiftTime",
-                header: "Shift Time",
-                enableSorting: true,
-                cell: ({ getValue }) => {
-                    const raw = getValue() as string | undefined | null;
-                    if (!raw) return "-";
-                    return new Date(raw).toLocaleString("en-IN", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                    });
-                },
-            },
-            {
-                id: "actions",
-                header: "Actions",
-                cell: ({ row }) => (
-                    <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => openEdit(row.original)}>
-                            Edit
-                        </Button>
-                        <Button variant="destructive" size="sm" onClick={() => handleDelete(row.original.$id)}>
-                            Delete
-                        </Button>
-                    </div>
-                ),
-            },
-        ],
-        [usernameMap, openEdit, handleDelete]
-    );
+    const columns: ColumnDef<Trip>[] = useMemo(() => [
+        { accessorKey: "tripId", header: "Trip ID", enableSorting: true },
+        {
+            accessorKey: "userEmail",
+            header: "User Email",
+            enableSorting: true,
+            cell: ({ getValue }) => {
+                const email = getValue() as string;
+                const username = usernameMap[email] ?? "";
+                return `${username} (${email})`;
+            }
+        },
+        { accessorKey: "siteName", header: "Site", enableSorting: true },
+        { accessorKey: "vehicleNumber", header: "Vehicle", enableSorting: true },
+        { accessorKey: "tripMethod", header: "Method", enableSorting: true },
+        { accessorKey: "startKm", header: "Start Km", enableSorting: true },
+        { accessorKey: "endKm", header: "End Km", enableSorting: true },
+        { accessorKey: "distanceTravelled", header: "Distance", enableSorting: true },
+        {
+            accessorKey: "escort",
+            header: "Escort",
+            enableSorting: true,
+            cell: ({ row }) => ((row.original.escort ?? false) ? "Yes" : "No")
+        },
+        {
+            accessorKey: "attached",
+            header: "Attached",
+            enableSorting: true,
+            cell: ({ row }) => ((row.original.attached ?? false) ? "Yes" : "No")
+        },
+        {
+            accessorKey: "edited",
+            header: "Edited",
+            enableSorting: true,
+            cell: ({ row }) => ((row.original.edited ?? false) ? "Yes" : "No")
+        },
+        {
+            accessorKey: "shiftTime",
+            header: "Shift Time",
+            enableSorting: true,
+            cell: ({ getValue }) => {
+                const raw = getValue() as string | undefined | null;
+                if (!raw) return "-";
+                return new Date(raw).toLocaleString("en-IN", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                });
+            }
+        },
+        {
+            id: "actions",
+            header: "Actions",
+            cell: ({ row }) => (
+                <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => openEdit(row.original)}>Edit</Button>
+                    <Button variant="destructive" size="sm" onClick={() => handleDelete(row.original.$id)}>Delete</Button>
+                </div>
+            )
+        }
+    ], [usernameMap]);
 
     // ========================
     // Render
@@ -282,87 +254,47 @@ export default function TripsTable() {
                 <Input
                     placeholder="Search by site, vehicle, tripId..."
                     value={search}
-                    onChange={(e) => {
-                        setPage(1);
-                        setSearch(e.target.value);
-                    }}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setPage(1); setSearch(e.target.value); }}
                     className="max-w-sm"
                 />
                 <Input
                     type="date"
-                    value={filterDate}
-                    onChange={(e) => {
-                        setPage(1);
-                        setFilterDate(e.target.value);
-                    }}
                     className="max-w-xs"
+                    value={filterDate}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setPage(1); setFilterDate(e.target.value); }}
                 />
-                <Button onClick={fetchTrips} disabled={loading}>
-                    {loading ? "Loading..." : "Fetch"}
-                </Button>
+                <Button onClick={fetchTrips} disabled={loading}>{loading ? "Loading..." : "Fetch"}</Button>
                 <Button onClick={() => exportCSV(data, usernameMap)}>Export CSV</Button>
             </div>
 
             <DataTable columns={columns} data={data} state={{ sorting }} onSortingChange={setSorting} />
 
             <div className="flex justify-between items-center pt-4">
-                <Button
-                    variant="outline"
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page === 1 || loading}
-                >
-                    Previous
-                </Button>
+                <Button variant="outline" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1 || loading}>Previous</Button>
                 <span>Page {page}</span>
-                <Button
-                    variant="outline"
-                    onClick={() => setPage((p) => p + 1)}
-                    disabled={loading || data.length < pageSize}
-                >
-                    Next
-                </Button>
+                <Button variant="outline" onClick={() => setPage(p => p + 1)} disabled={loading || data.length < pageSize}>Next</Button>
             </div>
 
-            {/* Edit Dialog */}
             <Dialog open={editOpen} onOpenChange={setEditOpen}>
                 <DialogContent className="max-w-lg">
-                    <DialogHeader>
-                        <DialogTitle>Edit Trip</DialogTitle>
-                    </DialogHeader>
+                    <DialogHeader><DialogTitle>Edit Trip</DialogTitle></DialogHeader>
                     <div className="space-y-4 py-2">
-                        {(["userEmail", "siteName", "vehicleNumber", "tripId", "tripMethod", "startKm", "endKm", "distanceTravelled"] as (keyof Trip)[]).map(
-                            (field) => (
-                                <div key={field} className="grid gap-1">
-                                    <Label htmlFor={field}>{field}</Label>
-                                    <Input
-                                        id={field}
-                                        type={["startKm", "endKm", "distanceTravelled"].includes(field) ? "number" : "text"}
-                                        value={
-                                            typeof editForm[field] === "boolean"
-                                                ? editForm[field]
-                                                    ? "true"
-                                                    : ""
-                                                : editForm[field] ?? ""
-                                        }
-                                        onChange={(e) =>
-                                            setEditForm((prev) => ({
-                                                ...prev,
-                                                [field]: ["startKm", "endKm", "distanceTravelled"].includes(field)
-                                                    ? Number(e.target.value)
-                                                    : e.target.value,
-                                            }))
-                                        }
-                                    />
-                                </div>
-                            )
-                        )}
-                        {(["escort", "attached", "edited"] as (keyof Trip)[]).map((field) => (
-                            <div key={field} className="flex items-center gap-2">
-                                <Switch
+                        {["userEmail","siteName","vehicleNumber","tripId","tripMethod","startKm","endKm","distanceTravelled"].map((field: string) => (
+                            <div key={field} className="grid gap-1">
+                                <Label htmlFor={field}>{field}</Label>
+                                <Input
                                     id={field}
-                                    checked={Boolean(editForm[field])}
-                                    onCheckedChange={(checked) => setEditForm((prev) => ({ ...prev, [field]: checked }))}
+                                    type={["startKm","endKm","distanceTravelled"].includes(field) ? "number" : "text"}
+                                    value={(editForm as any)[field] ?? ""}
+                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                                        setEditForm(prev => ({ ...prev, [field]: ["startKm","endKm","distanceTravelled"].includes(field) ? Number(e.target.value) : e.target.value }))
+                                    }
                                 />
+                            </div>
+                        ))}
+                        {["escort","attached","edited"].map((field: string) => (
+                            <div key={field} className="flex items-center gap-2">
+                                <Switch id={field} checked={(editForm as any)[field] ?? false} onCheckedChange={checked => setEditForm(prev => ({ ...prev, [field]: checked }))} />
                                 <Label htmlFor={field}>{field}</Label>
                             </div>
                         ))}
@@ -371,26 +303,15 @@ export default function TripsTable() {
                             <Input
                                 id="shiftTime"
                                 type="datetime-local"
-                                value={
-                                    editForm.shiftTime
-                                        ? new Date(editForm.shiftTime).toISOString().slice(0, 16)
-                                        : editingTrip?.shiftTime
-                                            ? new Date(editingTrip.shiftTime).toISOString().slice(0, 16)
-                                            : ""
-                                }
-                                onChange={(e) =>
-                                    setEditForm((prev) => ({
-                                        ...prev,
-                                        shiftTime: e.target.value ? new Date(e.target.value).toISOString() : undefined,
-                                    }))
+                                value={editForm.shiftTime ? new Date(editForm.shiftTime).toISOString().slice(0,16) : editingTrip?.shiftTime ? new Date(editingTrip.shiftTime).toISOString().slice(0,16) : ""}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                                    setEditForm(prev => ({ ...prev, shiftTime: e.target.value ? new Date(e.target.value).toISOString() : undefined }))
                                 }
                             />
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setEditOpen(false)}>
-                            Cancel
-                        </Button>
+                        <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
                         <Button onClick={handleEditSave}>Save</Button>
                     </DialogFooter>
                 </DialogContent>

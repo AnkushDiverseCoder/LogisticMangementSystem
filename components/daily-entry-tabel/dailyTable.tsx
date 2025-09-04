@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { ColumnDef, SortingState } from "@tanstack/react-table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { DataTable } from "@/components/ui/data-table";
 import dailyEntryFormService from "@/lib/dailyEntryFormService";
 import authService from "@/lib/authService";
 
-// DailyEntry type
+// Inline type for DailyEntry
 type DailyEntry = {
     $id: string;
     userEmail: string;
@@ -37,44 +37,29 @@ export default function DailyEntryTable() {
     const [sorting, setSorting] = useState<SortingState>([]);
     const [usernameMap, setUsernameMap] = useState<Record<string, string>>({});
 
-    // Fetch username mapping
-    const fetchUsernames = useCallback(async (emails: string[]) => {
+    // Fetch username mapping once
+    const fetchUsernames = async () => {
+        const emails = data.map(d => d.userEmail);
         if (!emails.length) return;
         const map = await authService.getUsersByEmails(emails);
-        const newMap: Record<string, string> = {};
+        const usernameMap: Record<string, string> = {};
         for (const email of Object.keys(map)) {
-            newMap[email] = map[email]?.username || "";
+            usernameMap[email] = map[email]?.username || "";
         }
-        setUsernameMap(newMap);
-    }, []);
+        setUsernameMap(usernameMap);
+    };
 
-    const fetchEntries = useCallback(async () => {
+    const fetchEntries = async () => {
         setLoading(true);
         try {
             const res = await dailyEntryFormService.listDailyEntryPagination(page, pageSize);
             if (!res.error) {
-                let entries: DailyEntry[] = (res.data || []).map((doc: any) => ({
-                    $id: doc.$id,
-                    userEmail: doc.userEmail,
-                    vehicleNumber: doc.vehicleNumber,
-                    vehicleType: doc.vehicleType,
-                    meterReading: doc.meterReading,
-                    fuelQuantity: doc.fuelQuantity,
-                    mileage: doc.mileage,
-                    totalDistance: doc.totalDistance,
-                    reqTripCount: doc.reqTripCount,
-                    escort: doc.escort,
-                    attached: doc.attached,
-                    edited: doc.edited,
-                    createdAt: doc.createdAt,
-                    $createdAt: doc.$createdAt,
-                    $updatedAt: doc.$updatedAt,
-                }));
+                let entries = res.data || [];
 
                 if (search.trim()) {
                     const lower = search.toLowerCase();
                     entries = entries.filter(
-                        (e) =>
+                        (e: DailyEntry) =>
                             e.vehicleNumber.toLowerCase().includes(lower) ||
                             e.userEmail.toLowerCase().includes(lower) ||
                             e.vehicleType.toLowerCase().includes(lower)
@@ -82,10 +67,10 @@ export default function DailyEntryTable() {
                 }
 
                 if (filterDate) {
-                    const start = new Date(`${filterDate}T00:00:00`);
-                    const end = new Date(`${filterDate}T23:59:59.999`);
+                    const start = new Date(filterDate + "T00:00:00");
+                    const end = new Date(filterDate + "T23:59:59.999");
                     entries = entries.filter(
-                        (e) => new Date(e.createdAt) >= start && new Date(e.createdAt) <= end
+                        (e: DailyEntry) => new Date(e.createdAt) >= start && new Date(e.createdAt) <= end
                     );
                 }
 
@@ -93,24 +78,16 @@ export default function DailyEntryTable() {
                     entries = [...entries].sort((a, b) => {
                         for (const sort of sorting) {
                             const { id, desc } = sort;
-                            const aVal =
-                                id === "userEmail" ? usernameMap[a.userEmail] : a[id as keyof DailyEntry];
-                            const bVal =
-                                id === "userEmail" ? usernameMap[b.userEmail] : b[id as keyof DailyEntry];
-                            const aComp = aVal ?? "";
-                            const bComp = bVal ?? "";
-                            if (aComp > bComp) return desc ? -1 : 1;
-                            if (aComp < bComp) return desc ? 1 : -1;
+                            let aVal: any = id === "userEmail" ? usernameMap[a.userEmail] : a[id as keyof DailyEntry];
+                            let bVal: any = id === "userEmail" ? usernameMap[b.userEmail] : b[id as keyof DailyEntry];
+                            if (aVal > bVal) return desc ? -1 : 1;
+                            if (aVal < bVal) return desc ? 1 : -1;
                         }
                         return 0;
                     });
                 }
 
                 setData(entries);
-
-                // Update usernames
-                const emails = entries.map((e) => e.userEmail);
-                fetchUsernames(emails);
             } else {
                 console.error("Service error:", res.error);
                 setData([]);
@@ -121,51 +98,22 @@ export default function DailyEntryTable() {
         } finally {
             setLoading(false);
         }
-    }, [page, pageSize, search, filterDate, sorting, usernameMap, fetchUsernames]);
-
-    const exportToCSV = useCallback(
-        <T extends object>(entries: T[], map: Record<string, string>, filename = "export.csv") => {
-            if (!entries.length) return;
-
-            const keys = Object.keys(entries[0]);
-            const csvContent = [
-                keys.map((k) => (k === "userEmail" ? "User (Email)" : k)).join(","),
-                ...entries.map((row) =>
-                    keys
-                        .map((k) =>
-                            k === "userEmail"
-                                ? `"${map[(row as any)[k] ?? ""]} (${(row as any)[k] ?? ""})"`
-                                : `"${(row as any)[k] ?? ""}"`
-                        )
-                        .join(",")
-                ),
-            ].join("\n");
-
-            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.setAttribute("download", filename);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        },
-        []
-    );
-
-    const handleDelete = useCallback(
-        async ($id: string) => {
-            if (!confirm("Are you sure you want to delete this entry?")) return;
-            const res = await dailyEntryFormService.deleteDailyEntry($id);
-            if (!res.error) fetchEntries();
-            else alert(res.error);
-        },
-        [fetchEntries]
-    );
+    };
 
     useEffect(() => {
         fetchEntries();
-    }, [fetchEntries]);
+    }, [search, filterDate, page, sorting]);
+
+    useEffect(() => {
+        fetchUsernames();
+    }, [data]);
+
+    const handleDelete = async ($id: string) => {
+        if (!confirm("Are you sure you want to delete this entry?")) return;
+        const res = await dailyEntryFormService.deleteDailyEntry($id);
+        if (!res.error) fetchEntries();
+        else alert(res.error);
+    };
 
     const columns: ColumnDef<DailyEntry>[] = useMemo(
         () => [
@@ -199,14 +147,18 @@ export default function DailyEntryTable() {
                 header: "Actions",
                 cell: ({ row }) => (
                     <div className="flex gap-2">
-                        <Button variant="destructive" size="sm" onClick={() => handleDelete(row.original.$id)}>
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDelete(row.original.$id!)}
+                        >
                             Delete
                         </Button>
                     </div>
                 ),
             },
         ],
-        [usernameMap, handleDelete]
+        [usernameMap]
     );
 
     return (
@@ -233,7 +185,10 @@ export default function DailyEntryTable() {
                 <Button onClick={fetchEntries} disabled={loading}>
                     {loading ? "Loading..." : "Fetch"}
                 </Button>
-                <Button variant="secondary" onClick={() => exportToCSV(data, usernameMap, "daily_entries.csv")}>
+                <Button
+                    variant="secondary"
+                    onClick={() => exportToCSV(data, usernameMap, "daily_entries.csv")}
+                >
                     Export CSV
                 </Button>
             </div>
