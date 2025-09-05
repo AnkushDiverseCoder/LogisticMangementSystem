@@ -129,7 +129,7 @@ const dailyEntryFormService = {
                 queries.push(Query.lessThan("$createdAt", end.toISOString()));
             }
 
-            const response = await databaseService.listAllDocuments(dbId, colId, queries);
+            const response = await databaseService.listAllDocumentsFast(dbId, colId, queries);
 
             if (response.error) return { error: response.error };
             return { data: response.data || [] };

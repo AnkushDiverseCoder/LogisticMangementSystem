@@ -68,6 +68,34 @@ const tripService = {
     }
   },
 
+  async fetchTripsForCsv(userEmails, startDate, endDate) {
+        try {
+            const queries = [];
+
+            // User filter
+            if (userEmails && userEmails.length > 0) {
+                queries.push(Query.equal("userEmail", userEmails));
+            }
+
+            // Date filter
+            if (startDate && endDate) {
+                const start = new Date(startDate);
+                const end = new Date(endDate);
+                end.setDate(end.getDate() + 1);
+
+                queries.push(Query.greaterThanEqual("$createdAt", start.toISOString()));
+                queries.push(Query.lessThan("$createdAt", end.toISOString()));
+            }
+
+            const response = await databaseService.listAllDocumentsFast(dbId, colId, queries);
+
+            if (response.error) return { error: response.error };
+            return { data: response.data || [] };
+        } catch (err) {
+            return { error: err?.message || "Failed to fetch entries for CSV" };
+        }
+    },
+
   async searchTrips({
     search,
     pageNumber = 1,
