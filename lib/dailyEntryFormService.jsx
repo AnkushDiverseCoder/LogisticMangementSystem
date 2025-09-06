@@ -35,12 +35,13 @@ const dailyEntryFormService = {
     // ✅ Create with meter reading validation
     async createDailyEntry(data) {
         try {
+            console.log("Creating entry with data:", data);
             if (!data.vehicleNumber || !data.meterReading) {
                 return {
                     error: new Error("Vehicle number and meter reading are required."),
                 };
             }
-
+            
             // Check last entry for vehicle
             const lastEntryResponse = await databaseService.listDocuments(dbId, colId, [
                 Query.equal("vehicleNumber", data.vehicleNumber),
@@ -70,10 +71,13 @@ const dailyEntryFormService = {
                 createdAt: new Date().toISOString(),
             };
 
-            const createResponse = await databaseService.createDocument(dbId, colId, ID.unique(), payload);
-            if (createResponse.error) return { error: createResponse.error };
+            const createResponse = await databaseService.createDocument(dbId, colId, payload,ID.unique());
+            if (createResponse.error) return {
+                error: createResponse.error
+            };
             return { data: createResponse };
         } catch (err) {
+            console.log(err);
             return { error: new Error("Unexpected error occurred: " + err.message) };
         }
     },

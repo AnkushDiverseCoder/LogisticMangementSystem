@@ -177,7 +177,7 @@ export default function EmployeeComplaintCrud() {
     ];
 
     return (
-        <div className="p-6 space-y-6">
+        <div className="container mx-auto py-10 space-y-6">
             {/* Header: Search + Add Button */}
             <div className="flex flex-wrap gap-2 items-center">
                 <Input

@@ -34,27 +34,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <header className="flex h-16 shrink-0 items-center justify-between border-b px-4">
                     <div className="flex items-center gap-2">
                         <SidebarTrigger className="-ml-1" />
-                        {/* <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
-                        <Breadcrumb>
-                            <BreadcrumbList>
-                                {segments.map((seg, idx) => {
-                                    const isLast = idx === segments.length - 1;
-                                    const href = "/" + segments.slice(0, idx + 1).join("/");
-                                    return (
-                                        <React.Fragment key={href}>
-                                            <BreadcrumbItem className={isLast ? "font-semibold" : "hidden md:block"}>
-                                                {isLast ? (
-                                                    <BreadcrumbPage>{formatSegment(seg)}</BreadcrumbPage>
-                                                ) : (
-                                                    <BreadcrumbLink href={href}>{formatSegment(seg)}</BreadcrumbLink>
-                                                )}
-                                            </BreadcrumbItem>
-                                            {!isLast && <BreadcrumbSeparator className="hidden md:block" />}
-                                        </React.Fragment>
-                                    );
-                                })}
-                            </BreadcrumbList>
-                        </Breadcrumb> */}
                     </div>
                 </header>
 

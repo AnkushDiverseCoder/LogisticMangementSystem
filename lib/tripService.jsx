@@ -466,7 +466,7 @@ const tripService = {
     }
 
     try {
-      const tripRes = await databaseService.listAllDocuments(dbId, colId, [
+      const tripRes = await databaseService.listAllDocumentsFast(dbId, colId, [
         Query.greaterThanEqual("$createdAt", start.toISOString()),
         Query.lessThan("$createdAt", end.toISOString()),
       ]);

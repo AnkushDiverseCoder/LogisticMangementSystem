@@ -12,6 +12,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
+import Link from "next/link"
 
 // This is sample data.
 const data = {
@@ -29,14 +30,14 @@ const data = {
           title: "Daily Entry",
           url: "/dailyentry",
         },
-        // {
-        //   title: "Trip Count",
-        //   url: "/tripcount",
-        // },
-        // {
-        //   title: "Disel Count",
-        //   url: "/diselcount",
-        // },
+        {
+          title: "Trip Count",
+          url: "/tripcount",
+        },
+        {
+          title: "Disel Count",
+          url: "/diselcount",
+        },
         {
           title: "Vehicle Entry",
           url: "/vehicleentry",
@@ -49,10 +50,10 @@ const data = {
           title: "client Complaint",
           url: "/clientcomplaint",
         },
-        // {
-        //   title: "Create Transaction",
-        //   url: "/createtransaction",
-        // },
+        {
+          title: "Create Daily Entry",
+          url: "/createdailyentry",
+        },
         {
           title: "Sign Up",
           url: "/signup",
@@ -69,7 +70,7 @@ const data = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
-    <Sidebar {...props}>
+    <Sidebar {...props} >
       <SidebarHeader>
         <VersionSwitcher />
       </SidebarHeader>
@@ -83,7 +84,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 {item.items.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild>
-                      <a href={item.url}>{item.title}</a>
+                      <Link href={item.url}>{item.title}</Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}

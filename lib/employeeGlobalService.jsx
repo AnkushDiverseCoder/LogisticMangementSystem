@@ -1,8 +1,8 @@
 import { ID, Query } from 'appwrite';
 import databaseService from './databaseService';
 
-const DATABASE_ID = process.env.EXPO_PUBLIC_APPWRITE_DB_ID;
-const EMPLOYEE_GLOBAL_COLLECTION_ID = process.env.EXPO_PUBLIC_APPWRITE_COL_EMPLOYEE_GLOBAL_DATA;
+const DATABASE_ID = process.env.NEXT_PUBLIC_APPWRITE_DB_ID;
+const EMPLOYEE_GLOBAL_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_COL_EMPLOYEE_GLOBAL_DATA;
 
 const employeeGlobalService = {
     async listEntries(queries = []) {

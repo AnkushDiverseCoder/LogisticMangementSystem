@@ -125,7 +125,7 @@ export default function SiteCrud() {
     // Render
     // ==============================
     return (
-        <div className="p-6 space-y-6">
+        <div className="container mx-auto py-10 space-y-6">
             {/* Header: Search + Buttons */}
             <div className="flex gap-2 items-center">
                 <Input

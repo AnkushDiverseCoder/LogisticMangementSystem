@@ -179,7 +179,7 @@ export default function VehicleCrud() {
   // Render
   // ==============================
   return (
-    <div className="p-6 space-y-6">
+    <div className="container mx-auto py-10 space-y-6">
       {/* Header: Search + Filters + Buttons */}
       <div className="flex flex-wrap gap-2 items-center">
         <Input
