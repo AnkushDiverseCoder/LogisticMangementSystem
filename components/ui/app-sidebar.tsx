@@ -59,6 +59,10 @@ const data = {
           url: "/signup",
         },
         {
+          title: "File Upload",
+          url: "/fileupload",
+        },
+        {
           title: "Download",
           url: "/download",
         },
