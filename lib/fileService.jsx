@@ -7,8 +7,8 @@ const META_COLLECTION_ID = config.col.userfilesmeta;
 const MAX_FILE_SIZE = 1024 * 1024; // 1MB
 
 const fileService = {
-    // Upload a file with public read/write permissions
-    async uploadFile(file, user) {
+    // Upload a file with user + vehicle metadata
+    async uploadFile(file, user, vehicle) {
         try {
             if (!file) return { success: false, error: "No file selected" };
             if (file.size > MAX_FILE_SIZE) return { success: false, error: `${file.name} exceeds 1MB` };
@@ -20,8 +20,7 @@ const fileService = {
                 file,
                 [Permission.read(Role.any()), Permission.write(Role.any())]
             );
-
-            // Save metadata
+            // Save metadata (user + vehicle)
             const metaDoc = await databaseService.createDocument(
                 config.db,
                 META_COLLECTION_ID,
@@ -32,9 +31,15 @@ const fileService = {
                     email: user.email,
                     originalName: file.name,
                     size: file.size,
+                    mileage: vehicle?.mileage ?? 0,
+                    vehicleNumber: vehicle?.vehicleNumber || null,
+                    vehicleType: vehicle?.vehicleType || null,
+                    labels: Array.isArray(vehicle?.labels) ? vehicle.labels : [vehicle?.labels || "Unlabeled"],
                 }
             );
 
+
+            console.log("Uploaded file and metadata:", vehicle, metaDoc);
             if (metaDoc.error) return { success: false, error: metaDoc.error };
 
             return { success: true, data: { ...uploaded, meta: metaDoc } };
@@ -43,10 +48,10 @@ const fileService = {
         }
     },
 
-    // List all files with optional filters
+    // List all files with optional filters (unchanged)
     async listFiles(filters = {}) {
         try {
-            const res = await databaseService.listAllDocuments(config.db, META_COLLECTION_ID);
+            const res = await databaseService.listAllDocumentsFast(config.db, META_COLLECTION_ID);
             if (res.error) return { success: false, error: res.error };
 
             let docs = res.data || [];
@@ -73,12 +78,11 @@ const fileService = {
         }
     },
 
-    // Delete file and metadata safely
+    // Delete file and metadata (unchanged)
     async deleteFile(fileId) {
         try {
             console.log("Deleting fileId:", fileId);
 
-            // Delete from storage (ignore 404)
             try {
                 await storage.deleteFile(BUCKET_ID, fileId);
             } catch (err) {
@@ -89,7 +93,6 @@ const fileService = {
                 }
             }
 
-            // Delete metadata using proper Appwrite Query
             const res = await databaseService.listDocuments(config.db, META_COLLECTION_ID, [
                 Query.equal("fileId", fileId)
             ]);
