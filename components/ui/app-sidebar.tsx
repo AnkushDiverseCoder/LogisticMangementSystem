@@ -1,5 +1,7 @@
-import * as React from "react"
-import { VersionSwitcher } from "@/components/ui/version-switcher"
+"use client";
+
+import * as React from "react";
+import { VersionSwitcher } from "@/components/ui/version-switcher";
 import {
   Sidebar,
   SidebarContent,
@@ -11,88 +13,64 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-} from "@/components/ui/sidebar"
-import Link from "next/link"
+} from "@/components/ui/sidebar";
+import Link from "next/link";
+import {
+  Home,
+  Calendar,
+  Truck,
+  Fuel,
+  MapPin,
+  Users,
+  FileText,
+  DollarSign,
+  UserPlus,
+  UploadCloud,
+  DownloadCloud,
+} from "lucide-react"; // <-- icons
 
-// This is sample data.
+// Menu data with icons
 const data = {
-  versions: ["1.0.1", "1.1.0-alpha", "2.0.0-beta1"],
   navMain: [
     {
       title: "Admin",
-      url: "#",
       items: [
-        {
-          title: "Dashboard",
-          url: "/",
-        },
-        {
-          title: "Daily Entry",
-          url: "/dailyentry",
-        },
-        {
-          title: "Trip Count",
-          url: "/tripcount",
-        },
-        {
-          title: "Disel Count",
-          url: "/diselcount",
-        },
-        {
-          title: "Vehicle Entry",
-          url: "/vehicleentry",
-        },
-        {
-          title: "Site Entry",
-          url: "/siteentry",
-        },
-        {
-          title: "client Complaint",
-          url: "/clientcomplaint",
-        },
-        {
-          title: "Create Daily Entry",
-          url: "/createdailyentry",
-        },
-        {
-          title: "Advance Entry",
-          url: "/advance-entry",
-        },
-        {
-          title: "Sign Up",
-          url: "/signup",
-        },
-        {
-          title: "File Upload",
-          url: "/fileupload",
-        },
-        {
-          title: "Download",
-          url: "/download",
-        },
-
+        { title: "Dashboard", url: "/", icon: <Home className="w-4 h-4 mr-2" /> },
+        { title: "Daily Entry", url: "/dailyentry", icon: <Calendar className="w-4 h-4 mr-2" /> },
+        { title: "Trip Count", url: "/tripcount", icon: <Truck className="w-4 h-4 mr-2" /> },
+        { title: "Disel Count", url: "/diselcount", icon: <Fuel className="w-4 h-4 mr-2" /> },
+        { title: "Vehicle Entry", url: "/vehicleentry", icon: <Truck className="w-4 h-4 mr-2" /> },
+        { title: "Site Entry", url: "/siteentry", icon: <MapPin className="w-4 h-4 mr-2" /> },
+        { title: "Client Complaint", url: "/clientcomplaint", icon: <Users className="w-4 h-4 mr-2" /> },
+        { title: "Create Daily Entry", url: "/createdailyentry", icon: <FileText className="w-4 h-4 mr-2" /> },
+        { title: "Advance Entry", url: "/advance-entry", icon: <DollarSign className="w-4 h-4 mr-2" /> },
+        { title: "Sign Up", url: "/signup", icon: <UserPlus className="w-4 h-4 mr-2" /> },
+        { title: "File Upload", url: "/fileupload", icon: <UploadCloud className="w-4 h-4 mr-2" /> },
+        { title: "Download", url: "/download", icon: <DownloadCloud className="w-4 h-4 mr-2" /> },
       ],
     },
   ],
-}
+};
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
-    <Sidebar {...props} >
+    <Sidebar {...props}>
       <SidebarHeader>
         <VersionSwitcher />
       </SidebarHeader>
       <SidebarContent>
-        {/* We create a SidebarGroup for each parent. */}
-        {data.navMain.map((item) => (
-          <SidebarGroup key={item.title}>
-            <SidebarGroupLabel>{item.title}</SidebarGroupLabel>
+        {data.navMain.map((group) => (
+          <SidebarGroup key={group.title}>
+            <SidebarGroupLabel>{group.title}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {item.items.map((item) => (
+                {group.items.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild>
-                      <Link href={item.url}>{item.title}</Link>
+                      <Link href={item.url} className="flex items-center">
+                        {item.icon}
+                        {item.title}
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
@@ -103,5 +81,5 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
       <SidebarRail />
     </Sidebar>
-  )
+  );
 }
