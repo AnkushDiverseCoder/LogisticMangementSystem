@@ -55,6 +55,10 @@ const data = {
           url: "/createdailyentry",
         },
         {
+          title: "Advance Entry",
+          url: "/advance-entry",
+        },
+        {
           title: "Sign Up",
           url: "/signup",
         },
