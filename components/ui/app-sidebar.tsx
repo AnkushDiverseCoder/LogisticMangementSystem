@@ -43,6 +43,7 @@ const data = {
         { title: "Site Entry", url: "/siteentry", icon: <MapPin className="w-4 h-4 mr-2" /> },
         { title: "Client Complaint", url: "/clientcomplaint", icon: <Users className="w-4 h-4 mr-2" /> },
         { title: "Create Daily Entry", url: "/createdailyentry", icon: <FileText className="w-4 h-4 mr-2" /> },
+        { title: "Validity", url: "/validity", icon: <FileText className="w-4 h-4 mr-2" /> },
         { title: "Advance Entry", url: "/advance-entry", icon: <DollarSign className="w-4 h-4 mr-2" /> },
         { title: "Sign Up", url: "/signup", icon: <UserPlus className="w-4 h-4 mr-2" /> },
         { title: "File Upload", url: "/fileupload", icon: <UploadCloud className="w-4 h-4 mr-2" /> },

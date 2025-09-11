@@ -3,8 +3,8 @@
 import { ID, Query } from 'appwrite';
 import databaseService from './databaseService';
 
-const DATABASE_ID = process.env.EXPO_PUBLIC_APPWRITE_DB_ID;
-const TRANSACTION_COLLECTION_ID = process.env.EXPO_PUBLIC_APPWRITE_COL_TRANSACTION;
+const DATABASE_ID = process.env.NEXT_PUBLIC_APPWRITE_DB_ID;
+const TRANSACTION_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_COL_TRANSACTION;
 
 const TIMEOUT_MS = 10000; // 10 seconds
 
