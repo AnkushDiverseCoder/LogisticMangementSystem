@@ -7,7 +7,7 @@ const COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_EXPENSE_COLLECTION_ID;
 const vExpenseService = {
     async list() {
         try {
-            const res = await databases.listDocuments(DB_ID, COLLECTION_ID, [
+            const res = await databases.listAllDocumentsFast(DB_ID, COLLECTION_ID, [
                 Query.orderDesc("$createdAt"),
             ]);
             return { success: true, data: res };

@@ -27,14 +27,14 @@ import {
 // Inline type
 export type VExpense = {
     $id: string;
-    vehicleNumber: string;
-    vehicleType: string;
-    labels?: string;
-    mileage?: number;
-    date?: string; // datetime
-    particular?: string;
-    amount?: number;
-    garage?: string;
+    vehicleNumber?: string | null;
+    vehicleType?: string | null;
+    labels?: string | null;
+    mileage?: number | null;
+    date?: string | null; // datetime
+    particular?: string | null;
+    amount?: number | null;
+    garage?: string | null;
 };
 
 export default function VExpensePage() {
@@ -60,20 +60,16 @@ export default function VExpensePage() {
 
     const loadExpenses = async () => {
         const res = await vExpenseService.list();
-        if (res.success && res.data?.documents) {
-            setExpenses(res.data.documents as unknown as VExpense[]);
+        if (res.success && res.data?.data) {
+            setExpenses(res.data.data as unknown as VExpense[]);
         } else toast.error(res.error || "Failed to load expenses");
     };
 
     const handleChange = (key: keyof VExpense, value: any) => {
-        setFormData({ ...formData, [key]: value });
+        setFormData({ ...formData, [key]: value ?? null });
     };
 
     const handleSubmit = async () => {
-        if (!formData.vehicleNumber) {
-            toast.error("Vehicle is required");
-            return;
-        }
         const payload = { ...formData };
         const res = editExpense
             ? await vExpenseService.update(editExpense.$id, payload)
@@ -102,17 +98,39 @@ export default function VExpensePage() {
     const columns = [
         { header: "Vehicle No", accessorKey: "vehicleNumber" },
         { header: "Vehicle Type", accessorKey: "vehicleType" },
-        { header: "Mileage", accessorKey: "mileage" },
-        { header: "Labels", accessorKey: "labels" },
+        {
+            header: "Mileage",
+            accessorKey: "mileage",
+            cell: ({ row }: any) => row.original.mileage ?? "—",
+        },
+        {
+            header: "Labels",
+            accessorKey: "labels",
+            cell: ({ row }: any) => row.original.labels || "—",
+        },
         {
             header: "Date",
             accessorKey: "date",
             cell: ({ row }: any) =>
-                row.original.date ? format(parseISO(row.original.date), "yyyy-MM-dd HH:mm") : "—",
+                row.original.date
+                    ? format(parseISO(row.original.date), "yyyy-MM-dd HH:mm")
+                    : "—",
         },
-        { header: "Particular", accessorKey: "particular" },
-        { header: "Amount", accessorKey: "amount" },
-        { header: "Garage", accessorKey: "garage" },
+        {
+            header: "Particular",
+            accessorKey: "particular",
+            cell: ({ row }: any) => row.original.particular || "—",
+        },
+        {
+            header: "Amount",
+            accessorKey: "amount",
+            cell: ({ row }: any) => (row.original.amount != null ? row.original.amount : "—"),
+        },
+        {
+            header: "Garage",
+            accessorKey: "garage",
+            cell: ({ row }: any) => row.original.garage || "—",
+        },
         {
             header: "Actions",
             cell: ({ row }: any) => (
@@ -177,10 +195,10 @@ export default function VExpensePage() {
                                     const v = vehicles.find((v) => v.vehicleNumber === val);
                                     setFormData({
                                         ...formData,
-                                        vehicleNumber: v.vehicleNumber,
-                                        vehicleType: v.vehicleType,
-                                        mileage: v.mileage,
-                                        labels: v.labels,
+                                        vehicleNumber: v?.vehicleNumber ?? null,
+                                        vehicleType: v?.vehicleType ?? null,
+                                        mileage: v?.mileage ?? null,
+                                        labels: v?.labels ?? null,
                                     });
                                 }}
                             >
@@ -201,16 +219,18 @@ export default function VExpensePage() {
                             <Label>Mileage</Label>
                             <Input
                                 type="number"
-                                value={formData.mileage || ""}
-                                onChange={(e) => handleChange("mileage", Number(e.target.value))}
+                                value={formData.mileage ?? ""}
+                                onChange={(e) =>
+                                    handleChange("mileage", e.target.value ? Number(e.target.value) : null)
+                                }
                             />
                         </div>
 
                         <div>
                             <Label>Labels</Label>
                             <Input
-                                value={formData.labels || ""}
-                                onChange={(e) => handleChange("labels", e.target.value)}
+                                value={formData.labels ?? ""}
+                                onChange={(e) => handleChange("labels", e.target.value || null)}
                             />
                         </div>
 
@@ -218,16 +238,16 @@ export default function VExpensePage() {
                             <Label>Date</Label>
                             <Input
                                 type="datetime-local"
-                                value={formData.date || ""}
-                                onChange={(e) => handleChange("date", e.target.value)}
+                                value={formData.date ?? ""}
+                                onChange={(e) => handleChange("date", e.target.value || null)}
                             />
                         </div>
 
                         <div>
                             <Label>Particular</Label>
                             <Input
-                                value={formData.particular || ""}
-                                onChange={(e) => handleChange("particular", e.target.value)}
+                                value={formData.particular ?? ""}
+                                onChange={(e) => handleChange("particular", e.target.value || null)}
                             />
                         </div>
 
@@ -235,16 +255,18 @@ export default function VExpensePage() {
                             <Label>Amount</Label>
                             <Input
                                 type="number"
-                                value={formData.amount || ""}
-                                onChange={(e) => handleChange("amount", Number(e.target.value))}
+                                value={formData.amount ?? ""}
+                                onChange={(e) =>
+                                    handleChange("amount", e.target.value ? Number(e.target.value) : null)
+                                }
                             />
                         </div>
 
                         <div>
                             <Label>Garage</Label>
                             <Input
-                                value={formData.garage || ""}
-                                onChange={(e) => handleChange("garage", e.target.value)}
+                                value={formData.garage ?? ""}
+                                onChange={(e) => handleChange("garage", e.target.value || null)}
                             />
                         </div>
                     </div>
@@ -284,13 +306,15 @@ export default function VExpensePage() {
                                                     ? "datetime-local"
                                                     : "text"
                                         }
-                                        value={(formData as any)[key] || ""}
+                                        value={(formData as any)[key] ?? ""}
                                         onChange={(e) =>
                                             handleChange(
                                                 key as keyof VExpense,
                                                 key === "amount" || key === "mileage"
-                                                    ? Number(e.target.value)
-                                                    : e.target.value
+                                                    ? e.target.value
+                                                        ? Number(e.target.value)
+                                                        : null
+                                                    : e.target.value || null
                                             )
                                         }
                                     />
