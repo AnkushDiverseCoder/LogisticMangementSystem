@@ -46,6 +46,7 @@ const data = {
         { title: "Validity", url: "/validity", icon: <FileText className="w-4 h-4 mr-2" /> },
         { title: "Advance Entry", url: "/advance-entry", icon: <DollarSign className="w-4 h-4 mr-2" /> },
         { title: "Sign Up", url: "/signup", icon: <UserPlus className="w-4 h-4 mr-2" /> },
+        { title: "Vechicle Management", url: "/management", icon: <Truck className="w-4 h-4 mr-2" /> },
         { title: "File Upload", url: "/fileupload", icon: <UploadCloud className="w-4 h-4 mr-2" /> },
         { title: "Download", url: "/download", icon: <DownloadCloud className="w-4 h-4 mr-2" /> },
       ],
