@@ -69,32 +69,32 @@ const tripService = {
   },
 
   async fetchTripsForCsv(userEmails, startDate, endDate) {
-        try {
-            const queries = [];
+    try {
+      const queries = [];
 
-            // User filter
-            if (userEmails && userEmails.length > 0) {
-                queries.push(Query.equal("userEmail", userEmails));
-            }
+      // User filter
+      if (userEmails && userEmails.length > 0) {
+        queries.push(Query.equal("userEmail", userEmails));
+      }
 
-            // Date filter
-            if (startDate && endDate) {
-                const start = new Date(startDate);
-                const end = new Date(endDate);
-                end.setDate(end.getDate() + 1);
+      // Date filter
+      if (startDate && endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        end.setDate(end.getDate() + 1);
 
-                queries.push(Query.greaterThanEqual("$createdAt", start.toISOString()));
-                queries.push(Query.lessThan("$createdAt", end.toISOString()));
-            }
+        queries.push(Query.greaterThanEqual("$createdAt", start.toISOString()));
+        queries.push(Query.lessThan("$createdAt", end.toISOString()));
+      }
 
-            const response = await databaseService.listAllDocumentsFast(dbId, colId, queries);
+      const response = await databaseService.listAllDocumentsFast(dbId, colId, queries);
 
-            if (response.error) return { error: response.error };
-            return { data: response.data || [] };
-        } catch (err) {
-            return { error: err?.message || "Failed to fetch entries for CSV" };
-        }
-    },
+      if (response.error) return { error: response.error };
+      return { data: response.data || [] };
+    } catch (err) {
+      return { error: err?.message || "Failed to fetch entries for CSV" };
+    }
+  },
 
   async searchTrips({
     search,
@@ -382,14 +382,18 @@ const tripService = {
   },
 
   async fetchTripsByUserOnly(userEmails) {
-    const queries = this.buildUserQuery(userEmails);
-    if (!queries.length) return { data: [] };
-
+    const emails = Array.isArray(userEmails) ? userEmails : [userEmails];
     try {
-      const response = await databaseService.listAllDocuments(dbId, colId, queries);
-      return { data: response.data };
+      const queries = emails.map(email => ({ key: "userEmail", value: email }));
+      const res = await this.listAllDocumentsFast(
+        dbId,
+        colId,
+        queries.map(q => Query.equal(q.key, q.value))
+      );
+      if (res.error) return { error: res.error };
+      return { data: res.data || [] };
     } catch (err) {
-      return { error: err?.message || "Failed to fetch trips by user" };
+      return { error: err?.message || "Failed to fetch user trips" };
     }
   },
 
@@ -465,54 +469,56 @@ const tripService = {
       end.setHours(6, 59, 59, 999);
     }
 
-    try {
-      const tripRes = await databaseService.listAllDocumentsFast(dbId, colId, [
-        Query.greaterThanEqual("$createdAt", start.toISOString()),
-        Query.lessThan("$createdAt", end.toISOString()),
-      ]);
+    // Fetch trips
+    const tripRes = await databaseService.listAllDocuments(dbId, colId, [
+      Query.greaterThanEqual("$createdAt", start.toISOString()),
+      Query.lessThan("$createdAt", end.toISOString()),
+    ]);
+    if (tripRes.error) return { error: tripRes.error };
 
-      const tripCounts = {};
-      (tripRes.data || []).forEach((t) => {
-        const email = t.userEmail?.toLowerCase();
-        if (!email) return;
-        tripCounts[email] = (tripCounts[email] || 0) + 1;
-      });
+    // Count trips
+    const tripCounts = {};
+    (tripRes.data || []).forEach((t) => {
+      const email = t.userEmail?.toLowerCase();
+      if (!email) return;
+      tripCounts[email] = (tripCounts[email] || 0) + 1;
+    });
 
-      const globalRes = await employeeGlobalService.listEntries([
-        Query.greaterThanEqual("createdAt", start.toISOString()),
-        Query.lessThan("createdAt", end.toISOString()),
-      ]);
-      if (!globalRes.success) return { error: globalRes.error };
+    // Fetch required counts from global entries
+    const globalRes = await employeeGlobalService.listEntries([
+      Query.greaterThanEqual("createdAt", start.toISOString()),
+      Query.lessThan("createdAt", end.toISOString()),
+    ]);
+    if (!globalRes.success) return { error: globalRes.error };
 
-      const latestReqMap = {};
-      for (const e of globalRes.data.data) {
-        const email = e.userEmail?.toLowerCase();
-        if (!email) continue;
-        if (
-          !latestReqMap[email] ||
-          new Date(e.createdAt) > new Date(latestReqMap[email].createdAt)
-        ) {
-          latestReqMap[email] = e;
-        }
+    // Build latest requirements map
+    const latestReqMap = {};
+    for (const e of globalRes.data.data) {
+      const email = e.userEmail?.toLowerCase();
+      if (!email) continue;
+      if (
+        !latestReqMap[email] ||
+        new Date(e.createdAt) > new Date(latestReqMap[email].createdAt)
+      ) {
+        latestReqMap[email] = e;
       }
-
-      const result = {};
-      for (const [email, count] of Object.entries(tripCounts)) {
-        result[email] = { count, reqTripCount: latestReqMap[email]?.reqTripCount ?? 0 };
-      }
-      for (const email of Object.keys(latestReqMap)) {
-        if (!result[email]) {
-          result[email] = {
-            count: 0,
-            reqTripCount: latestReqMap[email].reqTripCount ?? 0,
-          };
-        }
-      }
-
-      return { data: result };
-    } catch (err) {
-      return { error: err?.message || "Failed to fetch user trip counts" };
     }
+
+    // Merge counts + requirements
+    const result = {};
+    for (const [email, count] of Object.entries(tripCounts)) {
+      result[email] = { count, reqTripCount: latestReqMap[email]?.reqTripCount ?? 0 };
+    }
+    for (const email of Object.keys(latestReqMap)) {
+      if (!result[email]) {
+        result[email] = {
+          count: 0,
+          reqTripCount: latestReqMap[email].reqTripCount ?? 0,
+        };
+      }
+    }
+
+    return { data: result };
   },
 };
 

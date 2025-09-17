@@ -29,7 +29,7 @@ export const commonQueries = {
 const databaseService = {
   async listDocuments(databaseId, collectionId, queries = []) {
     try {
-      const response = await database.listDocuments(databaseId, collectionId, queries);
+      const response = await database.listDocuments({databaseId, collectionId, queries});
       return { documents: response.documents };
     } catch (error) {
       console.error("Error fetching documents:", error.message);
@@ -37,30 +37,38 @@ const databaseService = {
     }
   },
 
-  async listAllDocuments(databaseId, collectionId, baseQueries = []) {
-    const batchSize = 100;
-    let allDocuments = [];
-    let offset = 0;
+  async listAllDocuments(databaseId, collectionId, baseQueries = [], batchSize = 1000) {
+    try {
+      let allDocuments = [];
+      let offset = 0;
+      let fetchMore = true;
 
-    while (true) {
-      const paginatedQueries = [
-        ...baseQueries,
-        Query.offset(offset),
-        Query.limit(batchSize),
-      ];
+      while (fetchMore) {
+        // Build queries for this batch
+        const paginatedQueries = [
+          ...baseQueries,
+          Query.limit(batchSize),
+          Query.offset(offset),
+          Query.orderDesc("$createdAt"), // optional: ensures newest first
+        ];
 
-      const response = await this.listDocuments(databaseId, collectionId, paginatedQueries);
+        const response = await database.listDocuments(databaseId, collectionId, paginatedQueries);
 
-      if (response.error) return { error: response.error };
+        if (response.error) return { error: response.error };
 
-      const docs = response.documents || [];
-      allDocuments.push(...docs);
+        const docs = response.documents || [];
+        allDocuments.push(...docs);
 
-      if (docs.length < batchSize) break;
-      offset += batchSize;
+        // Stop if fewer docs than batch size
+        fetchMore = docs.length === batchSize;
+        offset += docs.length;
+      }
+
+      return { data: allDocuments };
+    } catch (err) {
+      console.error("Error in listAllDocuments:", err.message);
+      return { error: err.message || "Failed to fetch documents" };
     }
-
-    return { data: allDocuments };
   },
 
   async listAllDocumentsFast(databaseId, collectionId, baseQueries = [], startDate, endDate, batchLimit = 1000) {
@@ -79,21 +87,26 @@ const databaseService = {
 
       const start = new Date(startDate);
       const end = new Date(endDate);
+
       const dateRanges = [];
       let current = new Date(start);
+      current.setUTCHours(0, 0, 0, 0); // start of day UTC
 
       while (current <= end) {
         const next = new Date(current);
-        next.setDate(current.getDate() + 1);
+        next.setUTCDate(current.getUTCDate() + 1);
+        next.setUTCHours(23, 59, 59, 999); // end of day UTC
         dateRanges.push([new Date(current), new Date(next)]);
-        current = next;
+        current = new Date(next);
+        current.setUTCDate(current.getUTCDate() + 1);
+        current.setUTCHours(0, 0, 0, 0);
       }
 
       const promises = dateRanges.map(([s, e]) =>
         this.listDocuments(databaseId, collectionId, [
           ...baseQueries,
           Query.greaterThanEqual("$createdAt", s.toISOString()),
-          Query.lessThan("$createdAt", e.toISOString()),
+          Query.lessThanEqual("$createdAt", e.toISOString()), // inclusive
           Query.limit(batchLimit),
           Query.orderDesc("$createdAt"),
         ])
@@ -104,6 +117,9 @@ const databaseService = {
       results.forEach(r => {
         if (r.documents) allDocuments.push(...r.documents);
       });
+
+      // Optional: sort to maintain deterministic order
+      allDocuments.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
       return { data: allDocuments };
     } catch (err) {

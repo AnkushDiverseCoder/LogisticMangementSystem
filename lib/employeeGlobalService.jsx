@@ -7,7 +7,7 @@ const EMPLOYEE_GLOBAL_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_COL_EMPLO
 const employeeGlobalService = {
     async listEntries(queries = []) {
         try {
-            const res = await databaseService.listAllDocuments(DATABASE_ID, EMPLOYEE_GLOBAL_COLLECTION_ID, queries);
+            const res = await databaseService.listAllDocumentsFast(DATABASE_ID, EMPLOYEE_GLOBAL_COLLECTION_ID, queries);
             return { success: true, data: res };
         } catch (error) {
             return { success: false, error: error.message || 'Failed to fetch entries' };
@@ -16,7 +16,7 @@ const employeeGlobalService = {
 
     async createEntry(data) {
         try {
-            const res = await databaseService.createDocument(DATABASE_ID, EMPLOYEE_GLOBAL_COLLECTION_ID, ID.unique(), data);
+            const res = await databaseService.createDocument(DATABASE_ID, EMPLOYEE_GLOBAL_COLLECTION_ID, data,ID.unique());
             return { success: true, data: res };
         } catch (error) {
             return { success: false, error: error.message || 'Failed to create entry' };

@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 
 // ✅ shadcn toast
 import { toast } from "sonner";
+import employeeGlobalService from "@/lib/employeeGlobalService";
 
 type Employee = {
     $id?: string;
@@ -156,30 +157,66 @@ export default function DailyEntryPage() {
     };
 
     const handleSubmit = async () => {
+        if (!selectedEmployee || !selectedVehicle) {
+            toast.error("Please select both employee and vehicle.");
+            return;
+        }
+
+        // Parse numbers and calculate totalDistance
+        const meterReading = parseFloat(formData.meterReading?.toString() || "0");
+        const fuelQuantity = parseFloat(formData.fuelQuantity?.toString() || "0");
+        const mileageValue = parseFloat(formData.mileage?.toString() || "0");
+        const totalDistance = fuelQuantity * mileageValue;
+
         const payload = {
             ...formData,
-            meterReading: formData.meterReading ?? 0,
-            fuelQuantity: formData.fuelQuantity ?? 0,
-            mileage: formData.mileage ?? 0,
-            totalDistance: formData.totalDistance ?? 0,
-            reqTripCount: formData.reqTripCount ?? 0,
+            meterReading,
+            fuelQuantity,
+            mileage: mileageValue,
+            totalDistance,
+            reqTripCount: parseInt(formData.reqTripCount?.toString() || "0"),
+            userEmail: selectedEmployee.email,
+            username: selectedEmployee.username,
+            vehicleNumber: selectedVehicle.vehicleNumber,
+            vehicleType: selectedVehicle.vehicleType,
+            createdAt: new Date().toISOString(),
         };
 
-        const res = await dailyEntryFormService.createDailyEntry(payload);
-        if (res.error) {
-            toast.error("Error creating daily entry");
-        } else {
-            toast.success("Daily entry created successfully!");
+        try {
+            // 1️⃣ First: create or update global entry
+            const globalRes = await employeeGlobalService.createOrUpdateEntry(
+                formData,
+                selectedEmployee,
+                mileageValue
+            );
 
-            // ✅ Reset form after submit
-            setFormData({
-                ...initialFormData,
-                createdAt: new Date().toISOString(),
-            });
+            if (globalRes.error) {
+                toast.error(
+                    "Failed to update global tracking: " + globalRes.error
+                );
+                return; // ❌ Stop here if global entry fails
+            }
+
+            // 2️⃣ Then: create daily entry
+            const res = await dailyEntryFormService.createDailyEntry(payload);
+
+            if (res.error) {
+                toast.error(res.error.message || "Error creating daily entry");
+                return;
+            }
+
+            toast.success("Diesel entry and global tracking updated successfully!");
+
+            // 3️⃣ Reset form
+            setFormData({ ...initialFormData, createdAt: new Date().toISOString() });
             setSelectedEmployee(null);
             setSelectedVehicle(null);
+        } catch (err: any) {
+            toast.error("Unexpected error: " + err.message);
         }
     };
+
+
 
     return (
         <div className="max-w-2xl mx-auto p-6 space-y-6">

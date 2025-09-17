@@ -37,7 +37,7 @@ export default function TripCountPage() {
                 mode,
                 date ?? undefined
             )) as { data?: Record<string, TripData> };
-
+            console.log("Fetched trip data:", tripRes);
             const uniqueUsers = Array.from(
                 new Map(userRes.data?.map((u) => [u.email, u]) ?? []).values()
             );
