@@ -49,6 +49,7 @@ const data = {
         { title: "Vechicle Management", url: "/management", icon: <Truck className="w-4 h-4 mr-2" /> },
         { title: "File Upload", url: "/fileupload", icon: <UploadCloud className="w-4 h-4 mr-2" /> },
         { title: "Download", url: "/download", icon: <DownloadCloud className="w-4 h-4 mr-2" /> },
+        { title: "Driver Details", url: "/driver-detail", icon: <Truck className="w-4 h-4 mr-2" /> },
       ],
     },
   ],
