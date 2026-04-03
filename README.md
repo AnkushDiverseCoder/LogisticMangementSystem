@@ -1,36 +1,82 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+📖 Overview
 
-## Getting Started
+The Internal Logistics Management System is a secure, enterprise-grade application designed to manage logistics operations across multiple organizational roles.
 
-First, run the development server:
+It enables Admins, Supervisors, and Employees to efficiently handle trip tracking, fuel management, and reporting through a centralized, role-based system powered by Appwrite backend services.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+🔐 Access Control
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+🚫 Restricted Access Only
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+This system is strictly intended for authorized internal users.
+There is no public registration or external access, ensuring maximum data security and operational control.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+👥 Role-Based System
+👑 Admin
+Manage and register all users
+Configure role-based permissions
+Generate and export Excel reports
+Monitor complete system activity
 
-## Learn More
+🧑‍💼 Supervisor
+Submit and manage fuel records
+Track employee activities
+Monitor performance data
 
-To learn more about Next.js, take a look at the following resources:
+🚘 Employee
+Submit trip details (pickup, drop, distance)
+Maintain daily reporting logs
+Ensure accurate operational data entry
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+⚙️ System Architecture (Next.js Style Explanation)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+root/
+├── app/                # Routing & core modules (App Router style)
+├── components/         # Reusable UI components
+├── services/           # API & business logic layer
+├── lib/                # Utility & helper functions
+├── config/             # Environment & app configuration
+├── database/           # Schema & data models (Appwrite)
 
-## Deploy on Vercel
+🧠 Architecture Highlights
+Modular Structure → Clean separation of concerns
+Service Layer → Handles API calls & logic
+RBAC (Role-Based Access Control) → Enforced at backend level
+Cloud Functions → Automates validation, reporting, notifications
+Secure Database Layer → Managed via Appwrite
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+⚙️ Tech Stack
+Backend Platform: Appwrite
+Authentication: Appwrite Auth (Role-Based)
+Database: Appwrite Database (secure collections)
+Cloud Logic: Appwrite Functions
+Data Export: Server-side Excel generation
+Architecture: Modular + Service-Oriented
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+✨ Key Features
+🔐 Role-Based Authentication & Authorization (RBAC)
+☁️ Real-Time Data Synchronization
+📊 Automated Excel Report Generation
+🧠 Cloud Function-Based Business Logic
+📱 Mobile-Friendly Interface
+⚙️ Scalable & Maintainable Architecture
+🔄 Application Flow
+
+User logs in via secure authentication
+Role-based access determines available features
+Data is submitted and stored in secure database
+Cloud functions validate and process operations
+Admin can generate reports and monitor system
+
+🛡️ Security & Data Handling
+
+✅ Secure storage using Appwrite infrastructure
+✅ No public APIs or open endpoints
+✅ Strict role-based database permissions
+✅ Backend-driven validation & automation
+✅ No third-party analytics or tracking
+📊 Compliance & Standards
+🛡️ Meets modern data safety requirements
+🔒 Privacy-first design (business data only)
+📋 Clear role and permission model
+🧪 Test/demo access supported for reviewers
